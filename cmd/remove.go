@@ -4,59 +4,45 @@
 package cmd
 
 import (
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/elliottpolk/confgr/server"
+	"github.com/urfave/cli"
 )
 
-const Remove = "remove"
+func Remove(c *cli.Context) {
+	c.Command.VisibleFlags()
 
-var (
-	rmFlagSet *flag.FlagSet
-	rmApp     *string
-	rmEnv     *string
-)
+	app := c.String(AppFlag)
+	env := c.String(EnvFlag)
 
-func init() {
-	rmFlagSet = flag.NewFlagSet(Remove, flag.ExitOnError)
-	rmApp = rmFlagSet.String(AppFlag, "", "app name to be removed")
-	rmEnv = rmFlagSet.String(EnvFlag, "", "environment config is for (e.g. PROD, DEV, TEST...)")
-}
-
-//  RemoveCfg takes in a list of cli arguments and attempts to call the confgr
-//  remote API to remove the provided app / environment config. If no environment
-//  flag is set in the command, 'default' is used. If the remote API returns an
-//  error or a status code other than 200, it is noted and the response body is
-//  returned as the error.
-func RemoveCfg(args []string) error {
-	if err := rmFlagSet.Parse(args[2:]); err != nil {
-		return err
+	if len(env) < 1 {
+		fmt.Println("an environment value must be specified")
+		return
 	}
 
-	if len(*rmEnv) < 1 {
-		fmt.Println("NOTE: 'env' flag is not set, defaults to 'default'\n")
-		*rmEnv = "default"
-	}
-
-	addr := GetConfgrAddr()
-
-	res, err := http.Get(fmt.Sprintf("%s/remove?app=%s&env=%s", addr, *rmApp, *rmEnv))
+	addr := server.GetConfgrAddr()
+	res, err := http.Get(fmt.Sprintf("%s/remove?app=%s&env=%s", addr, app, env))
 	if err != nil {
-		return err
+		if res.Body != nil {
+			res.Body.Close()
+		}
+
+		fmt.Printf("unable to remove configuration for app %s: %v\n", app, err)
+		return
 	}
 	defer res.Body.Close()
 
 	if code := res.StatusCode; code != http.StatusOK {
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			fmt.Println("unable to read remove error response body")
-			return err
+			fmt.Printf("unable to read remove error response for app %s: %v\n", app, err)
+			return
 		}
 
 		fmt.Printf("remove API responded with a status code other than OK: %d\n", code)
-		return fmt.Errorf("%s", string(body))
+		fmt.Printf("response: %s\n", string(body))
 	}
-
-	return nil
 }

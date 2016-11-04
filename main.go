@@ -4,58 +4,97 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 
 	"github.com/elliottpolk/confgr/cmd"
 	"github.com/elliottpolk/confgr/server"
+	"github.com/urfave/cli"
 )
 
 func main() {
-	args := os.Args
-	if len(args) == 1 {
-		flag.Usage()
+	app := cli.NewApp()
+	app.Name = "confgr"
+	app.Usage = "a simple configuration service"
+	app.Commands = []cli.Command{
+		{
+			Name:    "list",
+			Aliases: []string{"ls"},
+			Usage:   "list all available configurations",
+			Action:  cmd.List,
+		},
+		{
+			Name:   "get",
+			Usage:  "get a specific app configuration",
+			Action: cmd.Get,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  fmt.Sprintf("%s, a", cmd.AppFlag),
+					Usage: "app name of configuration",
+				},
+				cli.StringFlag{
+					Name:  fmt.Sprintf("%s, e", cmd.EnvFlag),
+					Usage: "configuration environment (e.g. PROD, DEV, TEST)",
+				},
+				cli.StringFlag{
+					Name:  fmt.Sprintf("%s, t", cmd.TokenFlag),
+					Usage: "token to decrypt configuration",
+				},
+				cli.BoolFlag{
+					Name:  cmd.DecryptFlag,
+					Usage: "decrypt configuration",
+				},
+			},
+		},
+		{
+			Name:   "set",
+			Usage:  "set an app configuration",
+			Action: cmd.Set,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  fmt.Sprintf("%s, a", cmd.AppFlag),
+					Usage: "app name of configuration",
+				},
+				cli.StringFlag{
+					Name:  fmt.Sprintf("%s, e", cmd.EnvFlag),
+					Usage: "configuration environment (e.g. PROD, DEV, TEST)",
+				},
+				cli.StringFlag{
+					Name:  fmt.Sprintf("%s, c", cmd.CfgFlag),
+					Usage: "configuration to store",
+				},
+				cli.StringFlag{
+					Name:  fmt.Sprintf("%s, t", cmd.TokenFlag),
+					Usage: "token to encrypt configuration",
+				},
+				cli.BoolFlag{
+					Name:  cmd.EncryptFlag,
+					Usage: "encrypt configuration",
+				},
+			},
+		},
+		{
+			Name:    "remove",
+			Aliases: []string{"del"},
+			Usage:   "remove an app configuration",
+			Action:  cmd.Remove,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  fmt.Sprintf("%s, a", cmd.AppFlag),
+					Usage: "app name of configuration",
+				},
+				cli.StringFlag{
+					Name:  fmt.Sprintf("%s, e", cmd.EnvFlag),
+					Usage: "configuration environment (e.g. PROD, DEV, TEST)",
+				},
+			},
+		},
+		{
+			Name:   "server",
+			Usage:  "confgr server for storing app configurations",
+			Action: server.Start,
+		},
 	}
 
-	for _, a := range args[1:] {
-		if a == "-h" || a == "-help" || a == "--help" {
-			flag.Usage()
-		}
-	}
-
-	if args[1] != cmd.Server {
-		switch args[1] {
-		case cmd.List:
-			if err := cmd.ListCfgs(); err != nil {
-				fmt.Printf("unable to retrieve app listings: %v\n", err)
-				os.Exit(1)
-			}
-
-		case cmd.Get:
-			if err := cmd.GetCfg(args); err != nil {
-				fmt.Printf("unable to retrieve app config: %v\n", err)
-				os.Exit(1)
-			}
-
-		case cmd.Set:
-			if err := cmd.SetCfg(args); err != nil {
-				fmt.Printf("unable to set app config: %v\n", err)
-				os.Exit(1)
-			}
-
-		case cmd.Remove:
-			if err := cmd.RemoveCfg(args); err != nil {
-				fmt.Printf("unable to remove app config: %v\n", err)
-				os.Exit(1)
-			}
-
-		default:
-			flag.Usage()
-		}
-
-		return
-	}
-
-	server.Start()
+	app.Run(os.Args)
 }

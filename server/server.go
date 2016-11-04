@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/elliottpolk/confgr/datastore"
+	"github.com/urfave/cli"
 )
 
 const (
@@ -21,7 +23,7 @@ const (
 
 var stdPort, tlsPort, certFile, keyFile string
 
-func Start() {
+func Start(c *cli.Context) {
 	if err := datastore.Start(); err != nil {
 		panic(err)
 	}
@@ -83,4 +85,20 @@ func startHttps(certFile, keyFile string) bool {
 	}
 
 	return false
+}
+
+func GetConfgrAddr() string {
+	addr := "http://localhost:" + DefaultStdPort //	default
+
+	if env := os.Getenv("CONFGR_ADDR"); env != "" {
+		addr = env
+	}
+
+	//  ensure the address at least has http
+	if !strings.HasPrefix(addr, "http") {
+		addr = fmt.Sprintf("http://%s", addr)
+	}
+
+	//  trim the trailing slash to allow the commands to not have to worry
+	return strings.TrimSuffix(addr, "/")
 }

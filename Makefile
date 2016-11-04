@@ -1,4 +1,4 @@
-VERSION := v1.0.0
+VERSION := v1.1.0
 
 BIN := confgr
 PKG := github.com/elliottpolk
@@ -7,6 +7,8 @@ BUILD_IMAGE ?= golang:alpine
 
 BUILD_NUM := $(shell date +'%s')
 IMAGE := $(BIN):$(VERSION)-$(BUILD_NUM)
+
+GOOS ?= linux
 
 all: container
 

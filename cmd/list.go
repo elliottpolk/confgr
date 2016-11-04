@@ -7,14 +7,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/elliottpolk/confgr/server"
+	"github.com/urfave/cli"
 )
 
-const List = "list"
-
-func ListCfgs() error {
-	addr := GetConfgrAddr()
-
-	res, err := http.Get(fmt.Sprintf("%s/list", addr))
+func List(c *cli.Context) error {
+	res, err := http.Get(fmt.Sprintf("%s/list", server.GetConfgrAddr()))
 	if err != nil {
 		return err
 	}

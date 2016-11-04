@@ -6,88 +6,75 @@ package cmd
 import (
 	"encoding/base64"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/elliottpolk/confgr/config"
 	"github.com/elliottpolk/confgr/pgp"
+	"github.com/elliottpolk/confgr/server"
+	"github.com/urfave/cli"
 )
 
-const Get = "get"
+func Get(c *cli.Context) {
+	c.Command.VisibleFlags()
 
-var (
-	getFlagSet *flag.FlagSet
-	getApp     *string
-	getEnv     *string
-	getDecrypt *bool
-	getToken   *string
-)
-
-func init() {
-	getFlagSet = flag.NewFlagSet(Get, flag.ExitOnError)
-	getApp = getFlagSet.String(AppFlag, "", "app name to retrieve respective config")
-	getEnv = getFlagSet.String(EnvFlag, "", "environment config is for (e.g. PROD, DEV, TEST...)")
-	getDecrypt = getFlagSet.Bool(DecryptFlag, false, "decrypt config")
-	getToken = getFlagSet.String(TokenFlag, "", "token to decrypt config with")
-}
-
-func GetCfg(args []string) error {
-	if err := getFlagSet.Parse(args[2:]); err != nil {
-		return err
-	}
-
-	if *getDecrypt && len(*getToken) < 1 {
+	token := c.String(TokenFlag)
+	decrypt := c.Bool(DecryptFlag)
+	if decrypt && len(token) < 1 {
 		fmt.Println("decryption token must be provided if decryption flag is set to true")
-		flag.Usage()
+		return
 	}
 
-	if len(*getEnv) < 1 {
-		fmt.Println("NOTE: 'env' flag is not set, defaults to 'default'\n")
-		*getEnv = "default"
-	}
+	addr := server.GetConfgrAddr()
+	app := c.String(AppFlag)
+	env := c.String(EnvFlag)
 
-	addr := GetConfgrAddr()
-
-	res, err := http.Get(fmt.Sprintf("%s/get?app=%s&env=%s", addr, *getApp, *getEnv))
+	res, err := http.Get(fmt.Sprintf("%s/get?app=%s&env=%s", addr, app, env))
 	if err != nil {
-		return err
+		if res.Body != nil {
+			res.Body.Close()
+		}
+
+		fmt.Printf("unable to retrieve config for app %s: %v\n", app, err)
+		return
 	}
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return err
+		fmt.Printf("unable to read config data for app %s: %v\n", app, err)
+		return
 	}
 
 	fmt.Printf("\n%s\n", string(body))
 
-	if *getDecrypt {
-		return decryptCfg(body)
+	if decrypt {
+		if ptxt := decryptCfg(body, token); len(ptxt) > 0 {
+			fmt.Println("decrypted config:")
+			fmt.Printf("%s\n", ptxt)
+		}
 	}
-
-	return nil
 }
 
-func decryptCfg(data []byte) error {
+func decryptCfg(data []byte, token string) string {
 	cfg := &config.Config{}
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return err
+		fmt.Printf("unable to decrypt results: %v\n", err)
+		return ""
 	}
 
-	t, err := base64.StdEncoding.DecodeString(*getToken)
+	t, err := base64.StdEncoding.DecodeString(token)
 	if err != nil {
-		return err
+		fmt.Printf("unable to decrypt results: %v\n", err)
+		return ""
 	}
 
 	plaintxt, err := pgp.Decrypt(t, []byte(cfg.Value))
 	if err != nil {
-		return err
+		fmt.Printf("unable to decrypt results: %v\n", err)
+		return ""
 	}
 
-	fmt.Println("decrypted config:")
-	fmt.Printf("%s\n", string(plaintxt))
-
-	return nil
+	return string(plaintxt)
 }

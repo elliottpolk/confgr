@@ -6,7 +6,6 @@ package cmd
 import (
 	"encoding/base64"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,98 +13,75 @@ import (
 
 	"github.com/elliottpolk/confgr/config"
 	"github.com/elliottpolk/confgr/pgp"
+	"github.com/elliottpolk/confgr/server"
 	"github.com/elliottpolk/confgr/uuid"
+	"github.com/urfave/cli"
 )
 
-const Set = "set"
+func Set(c *cli.Context) {
+	c.Command.VisibleFlags()
 
-var (
-	setFlagSet  *flag.FlagSet
-	setApp      *string
-	setEnv      *string
-	setCfgValue *string
-	setEncrypt  *bool
-	setToken    *string
-)
+	app := c.String(AppFlag)
+	env := c.String(EnvFlag)
+	val := c.String(CfgFlag)
 
-func init() {
-	setFlagSet = flag.NewFlagSet(Set, flag.ExitOnError)
-	setApp = setFlagSet.String(AppFlag, "", "app name to be set")
-	setEnv = setFlagSet.String(EnvFlag, "", "environment config is for (e.g. PROD, DEV, TEST...)")
-	setCfgValue = setFlagSet.String(CfgFlag, "", "config to be written")
-	setEncrypt = setFlagSet.Bool(EncryptFlag, false, "encrypt config")
-	setToken = setFlagSet.String(TokenFlag, "", "base64 encoded token to encrypt config with")
-}
-
-func SetCfg(args []string) error {
-	if err := setFlagSet.Parse(args[2:]); err != nil {
-		return err
-	}
-
-	if len(*setEnv) < 1 {
-		fmt.Println("NOTE: 'env' flag is not set, defaults to 'default'\n")
-		*setEnv = "default"
-	}
-
-	cfg := &config.Config{
-		*setApp,
-		*setEnv,
-		*setCfgValue,
-	}
-
-	var token string
-	if *setEncrypt {
-		var err error
-		token, cfg.Value, err = encryptCfg()
+	encrypt := c.Bool(EncryptFlag)
+	token := c.String(TokenFlag)
+	if encrypt {
+		tok, enc, err := encryptCfg(token, val)
 		if err != nil {
-			return err
+			fmt.Printf("unable to encrypt config for app %s: %v\n", app, err)
+			return
 		}
+
+		token = tok
+		val = enc
 	}
 
+	cfg := &config.Config{app, env, val}
 	out, err := json.Marshal(cfg)
 	if err != nil {
-		return err
+		fmt.Printf("unable to marshal config to json for app %s: %v\n", app, err)
+		return
 	}
 
-	if err := sendCfg(string(out)); err != nil {
-		return err
+	if err := saveCfg(string(out)); err != nil {
+		fmt.Printf("unable to save config for app %s: %v\n", app, err)
+		return
 	}
 
-	if *setEncrypt {
-		fmt.Printf("token: 			 %s\n", token)
+	if encrypt {
+		fmt.Printf("token:           %s\n", token)
 		fmt.Printf("token as base64: %s\n", base64.StdEncoding.EncodeToString([]byte(token)))
 	}
 
 	fmt.Printf("stored config:\n%s\n", string(out))
-	return nil
 }
 
-func encryptCfg() (token, cfg string, err error) {
-	if len(*setToken) < 1 {
+func encryptCfg(token, value string) (string, string, error) {
+	if len(token) < 1 {
 		if token = uuid.GetV4(); len(token) < 1 {
-			err = fmt.Errorf("UUID produced an empty string\n")
-			return
+			return token, value, fmt.Errorf("UUID produced an empty string")
 		}
 	} else {
-		var t []byte
-		if t, err = base64.StdEncoding.DecodeString(*setToken); err != nil {
-			return
+		t, err := base64.StdEncoding.DecodeString(token)
+		if err != nil {
+			return token, value, err
 		}
 
 		token = string(t)
 	}
 
-	cypher, err := pgp.Encrypt([]byte(token), []byte(*setCfgValue))
+	cypher, err := pgp.Encrypt([]byte(token), []byte(value))
 	if err != nil {
-		return
+		return token, value, err
 	}
 
-	cfg = string(cypher)
-	return
+	return token, string(cypher), nil
 }
 
-func sendCfg(cfg string) error {
-	addr := GetConfgrAddr()
+func saveCfg(cfg string) error {
+	addr := server.GetConfgrAddr()
 
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/set", addr), strings.NewReader(cfg))
 	if err != nil {
@@ -115,6 +91,10 @@ func sendCfg(cfg string) error {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
+		if res.Body != nil {
+			res.Body.Close()
+		}
+
 		return err
 	}
 	defer res.Body.Close()
@@ -126,7 +106,7 @@ func sendCfg(cfg string) error {
 
 	if code := res.StatusCode; code != http.StatusOK {
 		fmt.Printf("server responded with status code %d\n", code)
-		return fmt.Errorf("%v", body)
+		return fmt.Errorf("%s", string(body))
 	}
 
 	return nil
