@@ -1,0 +1,42 @@
+version: "1"
+
+vars:
+  BIN: peppermint-sparkles
+  PKG: git.platform.manulife.io/oa-montreal/peppermint-sparkles
+  BUILD_IMAGE: golang:latest
+  VERSION: 2.0.0
+
+targets:
+  clean:
+    actions:
+      - rm -rf build/
+
+  build-dirs:
+    actions:
+      - mkdir -p build/bin
+
+  build:
+    deps: [build-dirs]
+    actions: [
+      "docker run --rm -it -v $GOPATH:/go -w /go/src/{{.PKG}} {{.BUILD_IMAGE}} /bin/bash -c 'go build -ldflags \"-X main.version={{.VERSION}}\" -o build/bin/{{.BIN}}'",
+      "cd build/bin && tar jcvf {{.BIN}}.tar.bz2 . && cd -"
+    ]
+
+  container:
+    deps: [clean, build-dirs]
+    actions: [
+      "docker run --rm -it -v $GOPATH:/go -w /go/src/{{.PKG}} golang:alpine /bin/sh -c 'go build -ldflags \"-X main.version={{.VERSION}}\" -o build/bin/{{.BIN}}'",
+      "export ts=$(date +'%s'); docker build -t {{.BIN}}:{{.VERSION}}-${ts} . && docker tag {{.BIN}}:{{.VERSION}}-${ts} {{.BIN}}:latest; unset ts"
+    ]
+
+  pcf-dev:
+    actions:
+      - cf push -f pcf/dev_manifest.yml
+    
+  pcf-sandbox:
+    actions:
+      - cf push -f pcf/sandbox_manifest.yml
+    
+  artifactory:
+    actions:
+      - jfrog rt u --user user --password APCYXWVLjd5ufKYq --url http://10.234.24.10/artifactory build/bin/{{.BIN}}.tar.bz2 libs-release-local/oa-montreal/{{.BIN}}/{{.BIN}}-v{{.VERSION}}.tar.bz2
