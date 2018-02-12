@@ -2,7 +2,7 @@ version: "1"
 
 vars:
   BIN: psparkles
-  REPO: git.platform.manulife.io/oa-montreal
+  REPO: gitlab.manulife.com/oa-montreal
   PKG: peppermint-sparkles
   BUILD_IMAGE: golang:latest
   VERSION: 2.0.0
@@ -26,7 +26,7 @@ targets:
   container:
     deps: [clean, build-dirs]
     actions: [
-      "docker run --rm -it -v $GOPATH:/go -w /go/src/{{.REPO}}/{{.PKG}} golang:alpine /bin/sh -c 'go build -ldflags \"-X main.version={{.VERSION}}\" -o build/bin/{{.BIN}}'",
+      "docker run --rm -it -v $GOPATH:/go -w /go/src/{{.REPO}}/{{.PKG}} {{.BUILD_IMAGE}} /bin/sh -c 'go build -ldflags \"-X main.version={{.VERSION}}\" -o build/bin/{{.BIN}}'",
       "export ts=$(date +'%s'); docker build -t {{.PKG}}:{{.VERSION}}-${ts} . && docker tag {{.PKG}}:{{.VERSION}}-${ts} {{.PKG}}:latest; unset ts"
     ]
 
