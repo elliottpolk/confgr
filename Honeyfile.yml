@@ -1,11 +1,11 @@
 version: "1"
 
 vars:
-  BIN: psparkles
+  BIN: sparkles
   REPO: git.platform.manulife.io/oa-montreal
   PKG: peppermint-sparkles
   BUILD_IMAGE: golang:latest
-  VERSION: 2.1.3
+  VERSION: 3.0.0
 
 targets:
   clean:
