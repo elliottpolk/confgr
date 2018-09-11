@@ -5,7 +5,7 @@ vars:
   REPO: git.platform.manulife.io/oa-montreal
   PKG: peppermint-sparkles
   BUILD_IMAGE: golang:latest
-  VERSION: 3.1.0
+  VERSION: 3.2.0
 
 targets:
   clean:
