@@ -1,65 +1,65 @@
-package cmd
+package main
 
-import "gopkg.in/urfave/cli.v2"
+import cli "gopkg.in/urfave/cli.v2"
 
 var (
-	AppNameFlag = cli.StringFlag{
+	appNameFlag = cli.StringFlag{
 		Name:    "app-name",
 		Aliases: []string{"a", "app"},
 		Usage:   "app name of secret",
 	}
 
-	AppEnvFlag = cli.StringFlag{
+	appEnvFlag = cli.StringFlag{
 		Name:    "app-env",
 		Aliases: []string{"e", "env"},
 		Usage:   "environment of secret (e.g. PROD, DEV, TEST, etc.)",
 	}
 
-	SecretIdFlag = cli.StringFlag{
+	secretIdFlag = cli.StringFlag{
 		Name:    "secret-id",
 		Aliases: []string{"id", "sid"},
 		Usage:   "generated ID of secret",
 	}
 
-	SecretFlag = cli.StringFlag{
+	secretFlag = cli.StringFlag{
 		Name:    "secret",
 		Aliases: []string{"s"},
 		Usage:   "secret to be stored",
 	}
 
-	SecretFileFlag = cli.StringFlag{
+	secretFileFlag = cli.StringFlag{
 		Name:    "secret-file",
 		Aliases: []string{"f"},
 		Usage:   "filepath to secret",
 	}
 
-	EncryptFlag = cli.BoolFlag{
+	encryptFlag = cli.BoolFlag{
 		Name:  "encrypt",
 		Value: true,
 		Usage: "encrypt secrets",
 	}
 
-	DecryptFlag = cli.BoolFlag{
+	decryptFlag = cli.BoolFlag{
 		Name:  "decrypt",
 		Usage: "decrypt secrets",
 	}
 
-	TokenFlag = cli.StringFlag{
+	tokenFlag = cli.StringFlag{
 		Name:    "token",
 		Aliases: []string{"t", "tok"},
 		Usage:   "token used to encrypt / decrypt secrets",
 	}
 
-	AddrFlag = cli.StringFlag{
+	addrFlag = cli.StringFlag{
 		Name:    "addr",
 		Usage:   "secrets service address",
 		EnvVars: []string{"PSPARKLES_ADDR"},
 	}
 
-	InsecureFlag = cli.BoolFlag {
-		Name:  "insecure",
+	insecureFlag = cli.BoolFlag{
+		Name:    "insecure",
 		Aliases: []string{"k"},
-		Value: false,
-		Usage: "(TLS) this option explicitly allows to perform \"insecure\" SSL connections",
+		Value:   false,
+		Usage:   "(TLS) this option explicitly allows to perform \"insecure\" SSL connections",
 	}
 )

@@ -16,7 +16,7 @@ all: clean unit-tests test-integration test-all build package
 .PHONY: build
 build: ; $(info $(M) building ...)                                  @ ## build the binary
 	@mkdir -p ./build/bin/
-	@GOOS=$(GOOS) go build -ldflags "-X main.version=$(VERSION)" -o ./build/bin/$(BIN)
+	@GOOS=$(GOOS) go build -ldflags "-X main.version=$(VERSION)" -o ./build/bin/$(BIN) ./cmd/sparkles
 
 .PHONY: package
 package: ; $(info $(M) packaging ...)                               @ ## package up the binary for distribution to Artifactory or PCF

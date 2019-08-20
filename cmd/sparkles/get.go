@@ -1,63 +1,15 @@
-package cmd
+package main
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/url"
 
-	"git.platform.manulife.io/go-common/log"
 	"git.platform.manulife.io/oa-montreal/peppermint-sparkles/crypto/pgp"
 	"git.platform.manulife.io/oa-montreal/peppermint-sparkles/models"
 	"git.platform.manulife.io/oa-montreal/peppermint-sparkles/service"
 
 	"github.com/pkg/errors"
-	"gopkg.in/urfave/cli.v2"
-)
-
-var (
-	Get = &cli.Command{
-		Name:    "get",
-		Aliases: []string{"ls", "list"},
-		Flags: []cli.Flag{
-			&AddrFlag,
-			&AppNameFlag,
-			&AppEnvFlag,
-			&SecretIdFlag,
-			&DecryptFlag,
-			&TokenFlag,
-			&InsecureFlag,
-		},
-		Usage: "retrieves secrets",
-		Action: func(context *cli.Context) error {
-			addr := context.String(AddrFlag.Name)
-			if len(addr) < 1 {
-				cli.ShowCommandHelpAndExit(context, context.Command.FullName(), 1)
-				return nil
-			}
-
-			token := context.String(TokenFlag.Name)
-			decrypt := context.Bool(DecryptFlag.Name)
-
-			if decrypt && len(token) < 1 {
-				return cli.Exit(errors.New("decrypt token must be specified in order to decrypt"), 1)
-			}
-
-			params := &url.Values{
-				service.AppParam: []string{context.String(AppNameFlag.Name)},
-				service.EnvParam: []string{context.String(AppEnvFlag.Name)},
-			}
-
-			insecure := context.Bool(InsecureFlag.Name)
-
-			s, err := get(decrypt, insecure, token, addr, context.String(SecretIdFlag.Name), params)
-			if err != nil {
-				return cli.Exit(errors.Wrap(err, "unable to retrieve secert"), 1)
-			}
-
-			log.Infof("\n%s\n", s.MustString())
-			return nil
-		},
-	}
 )
 
 func get(decrypt, insecure bool, token, addr, id string, params *url.Values) (*models.Secret, error) {
