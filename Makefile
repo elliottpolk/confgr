@@ -5,6 +5,7 @@ BUILD_IMAGE=golang:latest
 VERSION=$(shell cat .version)
 GOOS?=linux
 PACKAGER?=tar
+TAGS?=""
 
 # docker vars
 DOCKER_GRADLE_VER=$(shell cat ./docker/peppermint-sparkles-helper/gradle.version)
@@ -54,11 +55,7 @@ install: ; $(info $(M) installing locally...)                       @ ## install
 
 .PHONY: unit-tests
 unit-tests: ; $(info $(M) running unit tests ...)                   @ ## run only the unit tests
-	@go test -v -cover ./... && go test -v -cover ./...
-
-.PHONY: test-integration
-test-integration: ; $(info $(M) running integration tests ...)      @ ## run the integration tests which has deps on Docker
-	@go test -v -cover -tags="docker_env integration" ./...
+	@go test -v -cover -tags=$(TAGS) ./... 
 
 .PHONY: test-all
 test-all: unit-tests test-integration ;                             @ ## run all the tests
